@@ -1,0 +1,612 @@
+﻿
+<html>
+	<head>
+		<title>CM20219 – Coursework 2 – WebGL</title>
+        <meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body { margin: 0; overflow: hidden; }
+			canvas { width: 100%; height: 100%; }
+		</style>
+	</head>
+	<body>
+		<script src="three.js"></script>
+        <script src="OBJLoader.js"></script>
+		<script>
+            "use strict"; // https://stackoverflow.com/q/1335851/72470
+            //NEEDED TO IMPORT OBJLOADER.JS
+
+
+            // Global variables that are available in all functions.
+            // Note: You can add your own here, e.g. to store the rendering mode.
+            var camera, scene, renderer, mesh, material, geometry;
+            var origin = new THREE.Vector3(0, 0, 0);
+            var orbitAbout = new THREE.Vector3(0, 0, 0);
+
+			var redLight, greenLight, blueLight, ambLight, whiteLight;
+			var empty, emptyCube, emptyBunny;
+			var cube, points, line;
+                var bunny, bunnyPoints, bunnyLine;
+                var cubeDefaultMaterial, loadedTextures;
+
+            // Initialise the scene, and draw it for the first time.
+            init();
+			animate();
+
+            // Listen for keyboard events, to react to them.
+            // Note: there are also other event listeners, e.g. for mouse events.
+            document.addEventListener('keydown', handleKeyDown);
+
+            // Scene initialisation. This function is only run once, at the very beginning.
+            function init()
+            {
+                scene = new THREE.Scene();
+
+                // Set up the camera, move it to (3, 4, 5) and look at the origin (0, 0, 0).
+				setupCamera();
+
+
+                // Draw a helper grid in the x-z plane (note: y is up).
+                scene.add(new THREE.GridHelper(10, 20, 0xffffff));
+
+
+                // Draws an empty Geometry, used as a parent to the rest of the objects
+				drawEmpties();
+
+                //Add a cube as a child of empty
+				drawCube();
+
+                //Add each vertex as a child of emptyCube
+				drawCubePoints();
+
+                //Add each edge as a child of emptyCube
+				drawCubeEdges();
+
+                // TO DO: Visualise the axes of the global coordinate system (requirment 2).
+				drawAxes();
+
+                // Basic ambient lighting.
+				//TODO replace with scene.add(new THREE.AmbientLight(0xffffff));
+                addLights();
+				
+
+
+
+                // Add Bunny
+
+                // instantiate a loader
+                var loader = new THREE.OBJLoader();
+
+                // load a resource
+                loader.load(
+                    // resource URL
+                    'bunny.obj',
+                    // called when resource is loaded
+                    function (object) {  //object is an Object3D
+                        
+                        object.traverse(function (child) {
+                            if (child instanceof THREE.Mesh) {
+
+                                bunny = child;
+                            }
+                        });
+
+                        emptyBunny.add(bunny);
+
+                        //bunny geometry is a buffer geometry, making it a geometry
+                        var bunnyGeometry = new THREE.Geometry().fromBufferGeometry(bunny.geometry);
+                        bunnyGeometry.mergeVertices();
+                        bunny.geometry = bunnyGeometry;
+                        
+                        var scale = calcBunnyScale();
+
+                        bunny.geometry.scale(scale, scale, scale);
+
+                        var bunnyOffset = calcBunnyOffset();
+
+                        emptyBunny.translateX(-bunnyOffset.x);
+                        emptyBunny.translateY(-bunnyOffset.y);
+                        emptyBunny.translateZ(-bunnyOffset.z);
+                        
+
+                        //add bunny vertices
+                        var myBunnyPointsGeometry = new THREE.Geometry();
+                        for (var i = 0; i < bunny.geometry.vertices.length; i++) {
+                            myBunnyPointsGeometry.vertices.push(bunny.geometry.vertices[i]);
+                        }         
+                        var bunnyPointsMaterial = new THREE.PointsMaterial({ color: 0x00ff00, size: 0.05 });
+                        bunnyPoints = new THREE.Points(myBunnyPointsGeometry, bunnyPointsMaterial);
+                        emptyBunny.add(bunnyPoints);
+
+                        //add bunny edges
+                        var myBunnyEdgesGeometry = new THREE.EdgesGeometry(bunny.geometry);
+                        var myBunnyEdgesMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+                        bunnyLine = new THREE.LineSegments(myBunnyEdgesGeometry, myBunnyEdgesMaterial);
+                        emptyBunny.add(bunnyLine);
+
+                    },
+                );
+
+
+                // Set up the Web GL renderer.
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio); // HiDPI/retina rendering
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
+
+                // Handle resizing of the browser window.
+				window.addEventListener('resize', handleResize, false);
+            }
+
+            function calcBunnyScale() {
+                
+                bunny.geometry.computeBoundingBox();
+                var bunnyCenter = bunny.geometry.boundingBox.getCenter();
+                var bunnyBox = bunny.geometry.boundingBox;
+
+                var xSide = bunnyBox.max.x - bunnyBox.min.x;
+                var ySide = bunnyBox.max.y - bunnyBox.min.y;
+                var zSide = bunnyBox.max.z - bunnyBox.min.z;
+
+                var maxSide = Math.max(xSide, ySide, zSide);
+                return 2 / maxSide;
+                
+                
+            }
+
+            function calcBunnyOffset() {
+                bunny.geometry.computeBoundingBox();
+                var bunnyBox = bunny.geometry.boundingBox;
+                var bunnyCenter = bunny.geometry.boundingBox.getCenter();
+                bunny.localToWorld(bunnyCenter);
+                console.log(bunnyCenter);
+                return bunnyCenter;
+            }
+
+            // Handle resizing of the browser window.
+            function handleResize()
+            {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+
+            // Animation loop function. This function is called whenever an update is required.
+			function animate()
+            {
+				requestAnimationFrame(animate);
+
+                // TO DO: This is a good place for code that rotates your cube (requirement 3).
+
+                //reduce unnecessary checking of values once the rotation is complete to reduce CPU load
+
+                displayRotations();
+
+
+                if (translation) {
+                    moveCamera();
+                }
+
+                             
+                
+                
+                // Render the current scene to the screen.
+				renderer.render(scene, camera);
+			}
+
+            // Handle keyboard presses.
+
+
+            function handleKeyDown(event)
+            {
+                switch (event.keyCode)
+                {
+                    // Render modes.
+                    case 70: // f = face
+                        cube.visible = !cube.visible;
+                        bunny.visible = !bunny.visible;
+                        break;
+
+                    case 69: // e = edge
+                        line.visible = !line.visible;
+                        bunnyLine.visible = !bunnyLine.visible;
+                        break;
+
+                    case 86: // v = vertex
+                        points.visible = !points.visible;
+                        bunnyPoints.visible = !bunnyPoints.visible;
+                        break;
+
+                    // TO DO: add code for starting/stopping rotations (requirement 3).
+
+                    case 83: // s = start/stop
+                        rotation = !rotation;
+                        break;
+
+                    case 82: //r = rotate
+                        empty.rotation.x = 0;
+                        empty.rotation.y = 0;
+                        empty.rotation.z = 0;
+                        rotX = false;
+                        rotY = false;
+                        rotZ = false;
+                        break;
+
+                    case 49:    //1
+                        rotX = !rotX;
+                        break;
+                    case 50:    //2
+                        rotY = !rotY;
+                        break;
+                    case 51:    //3
+                        rotZ = !rotZ;
+                        break;
+
+                    case 52:    //4
+                        tranX1 = !tranX1;
+                        if (tranX2) {
+                            tranX2 = false;
+                        }
+                        break;
+                    case 53:    //5
+                        tranY1 = !tranY1;
+                        if (tranY2) {
+                            tranY2 = false;
+                        }
+                        break;
+                    case 54:    //6
+                        tranZ1 = !tranZ1;
+                        if (tranZ2) {
+                            tranZ2 = false;
+                        }
+
+                        break;
+
+
+                    case 55:    //7
+                        tranX2 = !tranX2;
+                        if (tranX1) {
+                            tranX1 = false;
+                        }
+                        break;
+                    case 56:    //8
+                        tranY2 = !tranY2;
+                        if (tranY1) {
+                            tranY1 = false;
+                        }
+                        break;
+                    case 57:    //9
+                        tranZ2 = !tranZ2;
+                        if (tranZ1) {
+                            tranZ1 = false;
+                        }
+                        break;
+
+                    case 48:    //0
+
+                        if (cube.material.name === "cubeDefaultMaterial") {
+                            cube.material = loadedTextures;
+                        }
+                        else if (cube.material.name === "loadedTextures") {
+                            cube.material = cubeDefaultMaterial;
+                        }
+                        break;
+                  
+
+
+                    case 84: //t - translate
+
+                        camera.position.set(3, 4, 5);
+                        tranX1 = false;
+                        tranY1 = false;
+                        tranZ1 = false;
+                        tranX2 = false;
+                        tranY2 = false;
+                        tranZ2 = false;
+                        camera.lookAt(origin);
+                        break;
+
+
+                    case 66: //b - toggle bunny
+                        emptyBunny.visible = !emptyBunny.visible;
+                        break;
+
+                    case 67: //c - toggle cube
+                        emptyCube.visible = !emptyCube.visible;
+                        break;
+
+                    case 37: // left arrow
+                        /*
+                        var pos = camera.position.sub(origin);
+                        radius = pos.length();
+                        theta = Math.acos(pos.z / radius);
+                        phi = Math.atan2(pos.y, pos.x);
+
+                        theta = Math.min(Math.max(theta - 0.1, 0), Math.PI);
+                        moveCameraArcBall();
+                        console.log("left");
+                        */
+                        lat += 1;
+                        moveCameraArcBall();
+                        break;
+                    case 38: //up arrow
+                        /*
+                        var pos = camera.position.sub(origin);
+                        radius = pos.length();
+                        theta = Math.acos(pos.z / radius);
+                        phi = Math.atan2(pos.y, pos.x);
+
+                        phi += -0.1;
+                        moveCameraArcBall();
+                        console.log("up");
+                        */
+                        long -= 1;
+                        moveCameraArcBall();
+                        break;
+                    case 39: //right arrow
+                        /*
+                        var pos = camera.position.sub(origin);
+                        radius = pos.length();
+                        theta = Math.acos(pos.z / radius);
+                        phi = Math.atan2(pos.y, pos.x);
+
+                        theta = Math.min(Math.max(theta + 0.1, 0), Math.PI);
+                        moveCameraArcBall();
+                        console.log("right");
+                        */
+                        lat -= 1;
+                        moveCameraArcBall();
+                        break;
+                    case 40: //down arrow#
+                        /*
+                        var pos = camera.position.sub(origin);
+                        radius = pos.length();
+                        theta = Math.acos(pos.z / radius);
+                        phi = Math.atan2(pos.y, pos.x);
+
+                        phi += 0.1;
+                        moveCameraArcBall();
+                        console.log("Down");
+                        */
+                        long += 1;
+                        moveCameraArcBall();
+                        break;
+
+                        //TODO check input keycode match comments
+                    case 85: // z - toggle red light
+                        redLight.visible = !redLight.visible;
+                        break;
+                    case 73: // x - toggle green light
+                        greenLight.visible = !greenLight.visible;
+                        break;
+                    case 79: // c - toggle blue light
+                        blueLight.visible = !blueLight.visible;
+                        break;
+                    case 76: // l - toggle custom RGB lighting
+                        ambLight.visible = !ambLight.visible;
+                        break;
+                        
+                        
+                }
+            }
+
+            var rotX = false;
+            var rotY = false;
+            var rotZ = false;
+
+            function displayRotations() {
+                var increment = Math.PI / 200;
+
+                if (rotX) {
+                    empty.rotation.x += increment;
+                }
+
+                if (rotY) {
+                    empty.rotation.y += increment;
+                }
+
+                if (rotZ) {
+                    empty.rotation.z += increment;
+                }
+            }
+
+            var tranX1 = false;
+            var tranY1 = false;
+            var tranZ1 = false;
+            var tranX2 = false;
+            var tranY2 = false;
+            var tranZ2 = false;
+            var translation = true;
+
+            function moveCamera() {
+                var increment = 0.01;
+
+                if (tranX1) {
+                    camera.translateX(increment);
+                }
+
+                if (tranX2) {
+                    camera.translateX(-increment);
+                }
+
+                if (tranY1) {
+                    camera.translateY(increment);
+                }
+
+                if (tranY2) {
+                    camera.translateY(-increment);
+                }
+
+                if (tranZ1){
+                    camera.translateZ(increment);
+                }
+
+                if (tranZ2) {
+                    camera.translateZ(-increment);
+                }
+
+            }
+
+			var theta;
+            var phi;
+            var pos;
+            var radius;
+            var lat = 0;
+            var long = 0;
+
+
+            var framesRendered = 0;           
+
+            function moveCameraArcBall() {               
+
+                pos = camera.position.sub(origin);
+                radius = pos.length();
+
+                    
+                phi = (90 - lat) * (Math.PI / 180);
+                theta = (180 + long) * (Math.PI / 180);
+                       
+
+                        camera.position.x =  -1 * radius * Math.sin(theta) * Math.cos(phi);
+                        camera.position.z = radius * Math.sin(theta) * Math.sin(phi);
+                        camera.position.y = radius * Math.cos(theta);
+
+                camera.lookAt(origin);
+                    
+
+
+                 
+                
+
+                
+            }
+
+			function drawAxes(){
+
+                var xMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+                var xAxisGeometry = new THREE.Geometry();
+                xAxisGeometry.vertices.push(origin);
+                xAxisGeometry.vertices.push(new THREE.Vector3(5, 0, 0));
+                var xAxis = new THREE.Line(xAxisGeometry, xMaterial);
+                scene.add(xAxis);
+
+                var yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+                var yAxisGeometry = new THREE.Geometry();
+                yAxisGeometry.vertices.push(origin);
+                yAxisGeometry.vertices.push(new THREE.Vector3(0, 5, 0));
+                var yAxis = new THREE.Line(yAxisGeometry, yMaterial);
+                scene.add(yAxis);
+
+                var zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+                var zAxisGeometry = new THREE.Geometry();
+                zAxisGeometry.vertices.push(origin);
+                zAxisGeometry.vertices.push(new THREE.Vector3(0, 0, 5));
+                var zAxis = new THREE.Line(zAxisGeometry, zMaterial);
+                scene.add(zAxis);
+			}
+
+            function addLights() {
+
+                ambLight = new THREE.AmbientLight(0xffffff);
+                scene.add(ambLight);
+
+                redLight = new THREE.SpotLight(0xff0000);
+                redLight.position.set(2, 5, 2);
+                redLight.target = cube;
+                scene.add(redLight);
+                redLight.visible = false;
+
+                greenLight = new THREE.SpotLight(0x00ff00);
+                greenLight.position.set(2, 5, 2);
+                greenLight.target = cube;
+                scene.add(greenLight);
+                greenLight.visible = false;
+
+                blueLight = new THREE.SpotLight(0x0000ff);
+                blueLight.position.set(2, 5, 2);
+                blueLight.target = cube;
+                scene.add(blueLight);
+                blueLight.visible = false;
+
+                whiteLight = new THREE.SpotLight(0xffffff);
+                whiteLight.position.set(2, 5, 2);
+                whiteLight.target = cube;
+                scene.add(whiteLight);
+                whiteLight.visible = true;
+			}
+
+			function drawCubePoints(){
+                var myPointsGeometry = new THREE.Geometry();
+                for (var i = 0; i < cube.geometry.vertices.length; i++) {
+                    myPointsGeometry.vertices.push(cube.geometry.vertices[i]);
+                }
+                var pointsMaterial = new THREE.PointsMaterial({ color: 0x00ff00 , size:0.1});
+                points = new THREE.Points(myPointsGeometry, pointsMaterial);
+                emptyCube.add(points);
+			}
+
+			function drawCubeEdges(){
+                var myEdgesGeometry = new THREE.EdgesGeometry(cube.geometry);
+                line = new THREE.LineSegments(myEdgesGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff }));
+                emptyCube.add(line);
+			}
+
+			function drawEmpties(){
+                var emptyGeometry = new THREE.Geometry();
+                emptyGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
+                empty = new THREE.Mesh(emptyGeometry);
+                emptyBunny = new THREE.Mesh(emptyGeometry);
+                emptyCube = new THREE.Mesh(emptyGeometry);
+                scene.add(empty);
+                empty.add(emptyBunny);
+                empty.add(emptyCube);
+            }
+
+            function loadTextures() {
+                var materials = [
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('1.jpg')
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('2.jpg')
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('3.jpg')
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('4.jpg')
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('5.jpg')
+                    }),
+                    new THREE.MeshBasicMaterial({
+                        map: THREE.ImageUtils.loadTexture('6.jpg')
+                    })
+                ];
+                return materials;
+            }
+
+			function drawCube(){
+                var myCubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+                cubeDefaultMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+
+                //requirement 7
+                loadedTextures = loadTextures();
+                cubeDefaultMaterial.name = "cubeDefaultMaterial";
+                loadedTextures.name = "loadedTextures";
+                //end requirement 7
+
+                cube = new THREE.Mesh(myCubeGeometry, cubeDefaultMaterial);
+                emptyCube.add(cube);
+			}
+
+			function setupCamera(){
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(3, 4, 5);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+			}
+
+
+		</script>
+	</body>
+</html>
