@@ -129,7 +129,6 @@
             var bunnyBox = bunny.geometry.boundingBox;
             var bunnyCenter = bunny.geometry.boundingBox.getCenter();
             bunny.localToWorld(bunnyCenter);
-            console.log(bunnyCenter);
             return bunnyCenter;
         }
         // Handle resizing of the browser window.
@@ -338,7 +337,6 @@
         var radius;
         var lat = 0;
         var long = 0;
-        var framesRendered = 0;
         function moveCameraArcBall() {
             pos = camera.position.sub(orbitAbout);
             radius = pos.length();
