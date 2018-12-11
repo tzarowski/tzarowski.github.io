@@ -1,4 +1,4 @@
-
+﻿
 <html>
 <head>
     <title>CM20219 – Coursework 2 – WebGL</title>
@@ -141,11 +141,8 @@
         function animate() {
             requestAnimationFrame(animate);
             // TO DO: This is a good place for code that rotates your cube (requirement 3).
-            //reduce unnecessary checking of values once the rotation is complete to reduce CPU load
             displayRotations();
-            if (translation) {
-                moveCamera();
-            }
+            moveCamera();
 
 
 
@@ -222,10 +219,10 @@
                     }
                     break;
                 case 48:    //0
-                    if (cube.material.name === "cubeDefaultMaterial") {
+                    if (cube.material == cubeDefaultMaterial) {
                         cube.material = loadedTextures;
                     }
-                    else if (cube.material.name === "loadedTextures") {
+                    else if (cube.material == loadedTextures) {
                         cube.material = cubeDefaultMaterial;
                     }
                     break;
@@ -303,13 +300,16 @@
         var tranX2 = false;
         var tranY2 = false;
         var tranZ2 = false;
-        var translation = true;
         function moveCamera() {
+
             var increment = 0.01;
             if (tranX1) {
                 camera.translateX(increment);
+                //for requirement 6
                 orbitAbout.x += increment;
+                //end requirement 6
             }
+
             if (tranX2) {
                 camera.translateX(-increment);
                 orbitAbout.x -= increment;
@@ -399,13 +399,10 @@
             scene.add(whiteLight);
             whiteLight.visible = true;
         }
+
         function drawCubePoints() {
-            var myPointsGeometry = new THREE.Geometry();
-            for (var i = 0; i < cube.geometry.vertices.length; i++) {
-                myPointsGeometry.vertices.push(cube.geometry.vertices[i]);
-            }
             var pointsMaterial = new THREE.PointsMaterial({ color: 0x00ff00, size: 0.1 });
-            points = new THREE.Points(myPointsGeometry, pointsMaterial);
+            points = new THREE.Points(cube.geometry, pointsMaterial);
             emptyCube.add(points);
         }
         function drawCubeEdges() {
@@ -413,6 +410,7 @@
             line = new THREE.LineSegments(myEdgesGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff }));
             emptyCube.add(line);
         }
+
         function drawEmpties() {
             var emptyGeometry = new THREE.Geometry();
             emptyGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
@@ -424,24 +422,25 @@
             empty.add(emptyCube);
         }
         function loadTextures() {
+            var myLoader = new THREE.TextureLoader();
             var materials = [
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('1.jpg')
+                    map: myLoader.load('1.jpg')
                 }),
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('2.jpg')
+                    map: myLoader.load('2.jpg')
                 }),
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('3.jpg')
+                    map: myLoader.load('3.jpg')
                 }),
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('4.jpg')
+                    map: myLoader.load('4.jpg')
                 }),
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('5.jpg')
+                    map: myLoader.load('5.jpg')
                 }),
                 new THREE.MeshBasicMaterial({
-                    map: THREE.ImageUtils.loadTexture('6.jpg')
+                    map: myLoader.load('6.jpg')
                 })
             ];
             return materials;
