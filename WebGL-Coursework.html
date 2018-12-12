@@ -157,10 +157,14 @@
         function handleKeyDown(event) {
             switch (event.keyCode) {
                 // Render modes.
+
+
                 case 70: // f = face
                     cube.visible = !cube.visible;
                     bunny.visible = !bunny.visible;
                     break;
+
+
                 case 69: // e = edge
                     line.visible = !line.visible;
                     bunnyLine.visible = !bunnyLine.visible;
@@ -177,9 +181,12 @@
                     rotY = false;
                     rotZ = false;
                     break;
+
+
                 case 49:    //1
                     rotX = !rotX;
                     break;
+
                 case 50:    //2
                     rotY = !rotY;
                     break;
@@ -328,11 +335,11 @@
             }
             if (tranZ1) {
                 camera.translateZ(increment);
-                orbitAbout.z += increment;
+                //orbitAbout.z += increment;
             }
             if (tranZ2) {
                 camera.translateZ(-increment);
-                orbitAbout.z -= increment;
+                //orbitAbout.z -= increment;
             }
         }
         var theta;
@@ -341,17 +348,18 @@
         var radius;
         var lat = 0;
         var long = 0;
+        var latDeg;
+        var longDeg;
+
+
         function moveCameraArcBall() {
             pos = camera.position.sub(orbitAbout);
             radius = pos.length();
-
-            phi = (90 - lat) * (Math.PI / 180);
-            theta = (180 + long) * (Math.PI / 180);
-
-            camera.position.x = -1 * radius * Math.sin(theta) * Math.cos(phi);
-            camera.position.z = radius * Math.sin(theta) * Math.sin(phi);
-            camera.position.y = radius * Math.cos(theta);
-
+            latDeg = (lat) * (Math.PI / 180);
+            longDeg = (long) * (Math.PI / 180);
+            camera.position.x = radius * Math.sin(longDeg) * Math.cos(latDeg);
+            camera.position.z = radius * Math.sin(longDeg) * Math.sin(latDeg);
+            camera.position.y = radius * Math.cos(longDeg);
             camera.position.add(orbitAbout);
             camera.lookAt(orbitAbout);
 
@@ -479,6 +487,7 @@
             document.body.appendChild(styleText("4 - Translate +X", 1, 1));
             document.body.appendChild(styleText("7 - Translate -X", 2, 1));
             document.body.appendChild(styleText("5 - Translate +Y", 3, 1));
+
             document.body.appendChild(styleText("8 - Translate -Y", 4, 1));
             document.body.appendChild(styleText("6 - Translate +Z", 5, 1));
             document.body.appendChild(styleText("9 - Translate -Z", 6, 1));
